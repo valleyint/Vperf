@@ -18,10 +18,10 @@ func DPerfClient () (int , error) {
 		return 0 , err
 	}
 
-	buff := make([]byte , 1000000)
+	buff := make([]byte , 1024 * 1024)
 
 	startTim := time.Now()
-	for loop := 0 ; loop < 1000 ; loop ++ {
+	for loop := 0 ; loop < 1024 ; loop ++ {
 		_ , err = conn.Write(buff)
 		if err != nil {
 			return 0 , err
@@ -32,4 +32,3 @@ func DPerfClient () (int , error) {
 	tim := endTim.Sub(startTim)
 	return int(tim.Milliseconds()) , nil
 }
- 
