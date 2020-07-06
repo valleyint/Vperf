@@ -2,8 +2,11 @@ package main
 
 import (
 	"net"
+	"os"
 	"time"
 )
+
+var server string
 
 const aces = "aces.lan.melkote.com"
 
@@ -26,9 +29,46 @@ func DPerfClient () (int , error) {
 		if err != nil {
 			return 0 , err
 		}
+
+		if loop % 10 == 0 && loop != 0 {
+			readable := []byte{}
+			_ , err = conn.Read(readable)
+			if err != nil {
+				return 0 , err
+			}
+
+
+		}
 	}
 	endTim := time.Now()
 
+	err = conn.Close()
+	if err != nil {
+		return 0 , err
+	}
 	tim := endTim.Sub(startTim)
 	return int(tim.Milliseconds()) , nil
+}
+
+// /var/server should be less than 100 bytes long
+func findServer () error {
+	file , err := os.Open("/var/server")
+	if err != nil {
+		return err
+	}
+
+	readable := make([]byte , 100)
+	_ , err = file.Read(readable)
+	if err != nil {
+		return err
+	}
+
+	server = string(readable)
+
+	err = file.Close()
+	if err!=nil {
+		return err
+	}
+
+	return nil
 }
