@@ -2,15 +2,17 @@ package main
 
 import (
 	"net"
+	"fmt"
 )
 
+const Port = 2222
+
 type server struct {
-	addr string
 	conn *net.TCPConn
 }
 
 func listuin () (*server , error) {
-	addr, err := net.ResolveTCPAddr("tcp", "126.0.0.1:2222")
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", Port))
 	if err != nil {
 		return nil, err
 	}
@@ -22,10 +24,11 @@ func listuin () (*server , error) {
 
 	conn , err := listner.AcceptTCP()
 	if err != nil {
+		listner.Close()
 		return nil , err
 	}
 
-	serv := server{conn: conn , addr: conn.RemoteAddr().String()}
+	serv := server{conn: conn}
 	return &serv , nil
 }
 
