@@ -15,9 +15,8 @@ type server struct {
 }
 
 type frame struct {
-	buff []byte
+	data []byte
 }
-
 func listen () (*net.TCPListener , error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", Port))
 	if err != nil {
@@ -32,7 +31,7 @@ func listen () (*net.TCPListener , error) {
 	return listner , nil
 }
 
-func accsept (listner *net.TCPListener) (*server , error){
+func accept (listner *net.TCPListener) (*server , error){
 	conn , err := listner.AcceptTCP()
 	if err != nil {
 		_ = listner.Close()
@@ -47,17 +46,25 @@ func (s *server) flood () {}
 
 // add client here
 
-func NewFrame () *frame {
-	sendArr := make([]byte , Size - 8)
-	_ , _ = rand.Read(sendArr)
+func newFrame () *frame {
+	sendArr := make([]byte , Size)
+	_ , _ = rand.Read(sendArr[9 : ])
 	binary.BigEndian.PutUint64(sendArr[0 : 8] , uint64(len(sendArr)))
-	frm := frame{buff: sendArr}
 
+	frm := frame{data: sendArr}
 	return &frm
 }
 
-func doFlood (conn *net.TCPConn) {
-	frm := NewFrame()
+func (f *frame) finalise (final bool) {
+	if final {
+		f.data[8] = 1
+	} else {
+		f.data[8] = 0
+	}
+}
 
-	
+func doFlood (conn *net.TCPConn) {
+	frm := newFrame()
+
+
 }
