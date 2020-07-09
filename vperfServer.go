@@ -17,6 +17,10 @@ type server struct {
 type frame struct {
 	data []byte
 }
+
+type client struct {
+	conn *net.TCPConn
+}
 func listen () (*net.TCPListener , error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", Port))
 	if err != nil {
