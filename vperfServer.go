@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"time"
 )
 
 const Port = 2222
@@ -67,8 +68,48 @@ func (f *frame) finalise (final bool) {
 	}
 }
 
-func doFlood (conn *net.TCPConn) {
+func doFlood (conn *net.TCPConn) (int , error) {
 	frm := newFrame()
+	starTim := time.Now()
+	loop := 0
+	for loop = 0 ; ; loop ++ {
+		totalWriten := 0
+		for {
+			numWriten, err := conn.Write(frm.data)
+			if err != nil {
+				return loop , err
+			}
+			totalWriten = totalWriten + numWriten
 
+			if totalWriten == Size {
+				break
+			}
+		}
 
+		if time.Now().Sub(starTim) >= 5 {
+			break
+		}
+	}
+
+	return loop , nil
+}
+
+func (f *frame) send (conn *net.TCPConn , final bool) error {
+	amountWriten := 0
+	f.finalise(final)
+	for {
+		numWriten, err := conn.Write(f.data[amountWriten : ])
+		if err != nil {
+			return err
+		}
+
+		amountWriten += numWriten
+		if amountWriten == len(f.data) {
+			return nil
+		}
+
+		if numWriten == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
 }
