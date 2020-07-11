@@ -6,37 +6,36 @@ import (
 	"time"
 )
 
-var server string
+var Server string
 
 const aces = "aces.lan.melkote.com"
 
-func DPerfClient () (int , error) {
-	addr , err := net.ResolveTCPAddr("tcp" , aces)
+func DPerfClient() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", aces)
 	if err != nil {
-		return 0 , err
+		return 0, err
 	}
 
-	conn , err := net.DialTCP("tcp" , nil , addr)
+	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		return 0 , err
+		return 0, err
 	}
 
-	buff := make([]byte , 1024 * 1024)
+	buff := make([]byte, 1024*1024)
 
 	startTim := time.Now()
-	for loop := 0 ; loop < 1024 ; loop ++ {
-		_ , err = conn.Write(buff)
+	for loop := 0; loop < 1024; loop++ {
+		_, err = conn.Write(buff)
 		if err != nil {
-			return 0 , err
+			return 0, err
 		}
 
-		if loop % 10 == 0 && loop != 0 {
+		if loop%10 == 0 && loop != 0 {
 			readable := []byte{}
-			_ , err = conn.Read(readable)
+			_, err = conn.Read(readable)
 			if err != nil {
-				return 0 , err
+				return 0, err
 			}
-
 
 		}
 	}
@@ -44,29 +43,27 @@ func DPerfClient () (int , error) {
 
 	err = conn.Close()
 	if err != nil {
-		return 0 , err
+		return 0, err
 	}
 	tim := endTim.Sub(startTim)
-	return int(tim.Milliseconds()) , nil
+	return int(tim.Milliseconds()), nil
 }
 
 // /var/server should be less than 100 bytes long
-func findServer () error {
-	file , err := os.Open("/var/server")
+func findServer() error {
+	file, err := os.Open("/var/server")
 	if err != nil {
 		return err
 	}
 
-	readable := make([]byte , 100)
-	_ , err = file.Read(readable)
+	readable := make([]byte, 100)
+	_, err = file.Read(readable)
 	if err != nil {
 		return err
 	}
-
-	server = string(readable)
 
 	err = file.Close()
-	if err!=nil {
+	if err != nil {
 		return err
 	}
 

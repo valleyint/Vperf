@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-const Port = 2222
-const Size = 100 * 1024 * 1024
+const usualPort = 2222
+const frameSize = 100 * 1024 * 1024
 
 type server struct {
 	conn *net.TCPConn
@@ -22,8 +22,9 @@ type frame struct {
 type client struct {
 	conn *net.TCPConn
 }
-func listen () (*net.TCPListener , error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", Port))
+
+func listen() (*net.TCPListener, error) {
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", usualPort))
 	if err != nil {
 		return nil, err
 	}
@@ -33,34 +34,35 @@ func listen () (*net.TCPListener , error) {
 		return nil, err
 	}
 
-	return listner , nil
+	return listner, nil
 }
 
-func accept (listner *net.TCPListener) (*server , error){
-	conn , err := listner.AcceptTCP()
+func accept(listner *net.TCPListener) (*server, error) {
+	conn, err := listner.AcceptTCP()
 	if err != nil {
 		_ = listner.Close()
-		return nil , err
+		return nil, err
 	}
 
 	serv := server{conn: conn}
-	return &serv , nil
+	return &serv, nil
 }
 
-func (s *server) flood () {}
+func (s *server) flood() {
+
+}
 
 // add client here
 
-func newFrame () *frame {
-	sendArr := make([]byte , Size)
-	_ , _ = rand.Read(sendArr[9 : ])
-	binary.BigEndian.PutUint64(sendArr[0 : 8] , uint64(len(sendArr)))
-
+func newFrame(size uint64) *frame {
+	sendArr := make([]byte, size)
+	_, _ = rand.Read(sendArr[9:])
 	frm := frame{data: sendArr}
+	frm.setSize(size - 9)
 	return &frm
 }
 
-func (f *frame) finalise (final bool) {
+func (f *frame) setFinal(final bool) {
 	if final {
 		f.data[8] = 1
 	} else {
@@ -68,37 +70,39 @@ func (f *frame) finalise (final bool) {
 	}
 }
 
-func doFlood (conn *net.TCPConn) (int , error) {
-	frm := newFrame()
-	starTim := time.Now()
-	loop := 0
-	for loop = 0 ; ; loop ++ {
-		totalWriten := 0
-		for {
-			numWriten, err := conn.Write(frm.data)
-			if err != nil {
-				return loop , err
-			}
-			totalWriten = totalWriten + numWriten
-
-			if totalWriten == Size {
-				break
-			}
-		}
-
-		if time.Now().Sub(starTim) >= 5 {
-			break
-		}
-	}
-
-	return loop , nil
+func (f *frame) getFinal() bool {
+	return f.data[8] == 1
 }
 
-func (f *frame) send (conn *net.TCPConn , final bool) error {
-	amountWriten := 0
-	f.finalise(final)
+func (f *frame) getSize() uint64 {
+	return binary.BigEndian.Uint64(f.data[0:8])
+}
+
+func (f *frame) setSize(size uint64) {
+	binary.BigEndian.PutUint64(f.data[0:8], size)
+}
+
+func doFlood(conn *net.TCPConn) error {
+	frm := newFrame(frameSize)
+	starTim := time.Now()
 	for {
-		numWriten, err := conn.Write(f.data[amountWriten : ])
+		last := time.Now().Sub(starTim) > 5*time.Second
+		err := frm.send(conn, last)
+		if err != nil {
+			return err
+		}
+
+		if last {
+			return nil
+		}
+	}
+}
+
+func (f *frame) send(conn *net.TCPConn, final bool) error {
+	amountWriten := 0
+	f.setFinal(final)
+	for {
+		numWriten, err := conn.Write(f.data[amountWriten:])
 		if err != nil {
 			return err
 		}
@@ -109,6 +113,43 @@ func (f *frame) send (conn *net.TCPConn , final bool) error {
 		}
 
 		if numWriten == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+}
+
+func (f *frame) receive(conn *net.TCPConn) error {
+	var amountRead uint64
+	for {
+		numRead, err := conn.Read(f.data[amountRead:9])
+		if err != nil {
+			return err
+		}
+
+		amountRead += uint64(numRead)
+		if amountRead == 9 {
+			break
+		}
+
+		if numRead == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+
+	amountRead = 0
+	size := f.getSize()
+	for {
+		numRead, err := conn.Read(f.data[9 : size+9])
+		if err != nil {
+			return err
+		}
+
+		amountRead += uint64(numRead)
+		if amountRead == size {
+			return nil
+		}
+
+		if numRead == 0 {
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
