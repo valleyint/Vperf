@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-const usualPort = 2222
-const frameSize = 100 * 1024 * 1024
+const usualPort = "2222"
+const maxBufferSize = 100 * 1024 * 1024
 
 type server struct {
 	conn *net.TCPConn
@@ -17,10 +17,15 @@ type server struct {
 
 type frame struct {
 	data []byte
+	firstArrival time.Time
 }
 
 type client struct {
 	conn *net.TCPConn
+}
+
+type stats struct {
+
 }
 
 func listen() (*net.TCPListener, error) {
@@ -48,8 +53,26 @@ func accept(listner *net.TCPListener) (*server, error) {
 	return &serv, nil
 }
 
-func (s *server) flood() {
+func (s *server) flood () (string , error) {
+	frm := newFrame(maxBufferSize)
+	//the only command supported is flood me , so we ignore cmd frame
+	err := frm.receive(s.conn)
+	if err != nil {
+		return "" , nil
+	}
+	err = doFlood(s.conn , frm)
+	if err != nil {
+		return "" , err
+	}
 
+	err = frm.receive(s.conn)
+	if err != nil {
+		return "" , err
+	}
+
+	stat := string(frm.data[9 : frm.getSize()])
+
+	return stat , nil
 }
 
 // add client here
@@ -82,11 +105,10 @@ func (f *frame) setSize(size uint64) {
 	binary.BigEndian.PutUint64(f.data[0:8], size)
 }
 
-func doFlood(conn *net.TCPConn) error {
-	frm := newFrame(frameSize)
+func doFlood(conn *net.TCPConn , frm *frame) error {
 	starTim := time.Now()
 	for {
-		last := time.Now().Sub(starTim) > 5*time.Second
+		last := time.Now().Sub(starTim) >= 5 * time.Second
 		err := frm.send(conn, last)
 		if err != nil {
 			return err
@@ -98,11 +120,48 @@ func doFlood(conn *net.TCPConn) error {
 	}
 }
 
+//latency milliseconds, throughput Megabits/second , error
+func handleFlood(conn *net.TCPConn , frm *frame) (int , float64 , error) {
+	cmd := []byte("flood me")
+	copy(frm.data[9 : ] , cmd)
+	frm.setSize(uint64(len(cmd)))
+	Start := time.Now()
+	err := frm.send(conn , false)
+	if err != nil {
+		return 0 , 0 ,err
+	}
+
+	bytesRead := uint64(0)
+	lat := 0
+	for loop := 0 ; ; loop ++ {
+		err = frm.receive(conn)
+		if err != nil {
+			return 0 , 0 , err
+		}
+
+		if loop == 0 {
+			lat = int(frm.firstArrival.Sub(Start).Milliseconds())
+		}
+
+		if frm.getFinal() == true {
+			break
+		}
+
+		bytesRead += frm.getSize()
+	}
+	throughDur := time.Now().Sub(Start)
+	throughPut := float64(bytesRead) / throughDur.Seconds()
+	throughPut = (throughPut *8) / (1024 * 1024)
+
+	return lat , throughPut , nil
+}
+
 func (f *frame) send(conn *net.TCPConn, final bool) error {
 	amountWriten := 0
 	f.setFinal(final)
+	sz := f.getSize()
 	for {
-		numWriten, err := conn.Write(f.data[amountWriten:])
+		numWriten, err := conn.Write(f.data[amountWriten : sz])
 		if err != nil {
 			return err
 		}
@@ -118,8 +177,22 @@ func (f *frame) send(conn *net.TCPConn, final bool) error {
 	}
 }
 
-func (f *frame) receive(conn *net.TCPConn) error {
+func (f *frame) receive (conn *net.TCPConn) error {
 	var amountRead uint64
+
+	for amountRead < 1 {
+		numRead, err := conn.Read(f.data[0:1])
+		if err != nil {
+			return err
+		}
+		amountRead += uint64(numRead)
+
+		if numRead == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+	f.firstArrival = time.Now()
+
 	for {
 		numRead, err := conn.Read(f.data[amountRead:9])
 		if err != nil {
@@ -153,4 +226,19 @@ func (f *frame) receive(conn *net.TCPConn) error {
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
+}
+
+func connect () (*client , error) {
+	raddr , err := net.ResolveTCPAddr("tcp" , net.JoinHostPort(aces , usualPort))
+	if err != nil {
+		return nil, err
+	}
+
+	conn , err := net.DialTCP("tcp" , nil , raddr)
+	if err != nil {
+		return nil, err
+	}
+
+	clint := client{conn: conn}
+	return &clint , nil
 }
