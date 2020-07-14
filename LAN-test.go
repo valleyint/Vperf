@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-var Server string
-
-const aces = "aces.lan.melkote.com"
 
 func DPerfClient() (int, error) {
 	addr, err := net.ResolveTCPAddr("tcp", aces)

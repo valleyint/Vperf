@@ -2,14 +2,22 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"math/rand"
 	"net"
 	"time"
 )
 
+//interm server , to be reaplaced by a function to resolve server addres
+
 const usualPort = "2222"
 const maxBufferSize = 100 * 1024 * 1024
+
+type options struct {
+	server bool
+	client string
+}
 
 type server struct {
 	conn *net.TCPConn
@@ -22,10 +30,6 @@ type frame struct {
 
 type client struct {
 	conn *net.TCPConn
-}
-
-type stats struct {
-
 }
 
 func listen() (*net.TCPListener, error) {
@@ -228,8 +232,8 @@ func (f *frame) receive (conn *net.TCPConn) error {
 	}
 }
 
-func connect () (*client , error) {
-	raddr , err := net.ResolveTCPAddr("tcp" , net.JoinHostPort(aces , usualPort))
+func connect (host string) (*client , error) {
+	raddr , err := net.ResolveTCPAddr("tcp" , net.JoinHostPort(host , usualPort))
 	if err != nil {
 		return nil, err
 	}
@@ -241,4 +245,62 @@ func connect () (*client , error) {
 
 	clint := client{conn: conn}
 	return &clint , nil
+}
+
+func (c *client) askflood () (int , float64 , error) {
+	frm := newFrame(maxBufferSize)
+	lat , speed , err := handleFlood(c.conn , frm)
+	if err != nil {
+		return 0 , 0 , err
+	}
+
+	return lat , speed , nil
+}
+
+func Vperf () {
+	var opts options
+	flag.BoolVar(&opts.server , "server" , false , "specify a mode -s (server) or -c (client)")
+	flag.StringVar(&opts.client , "client" , "" , "specify a mode -s (server) or -c (client)")
+
+	if opts.server && len(opts.client) != 0 {
+		fmt.Printf("the program cannot be both a sever and client /n if you wish to loopback please use 2 windows for the function")
+	}
+
+	if !opts.server && len(opts.client) == 0 {
+		fmt.Println("specify a mode -s (server) or -c (client)")
+	}
+
+	if opts.server {
+		listner , err := listen()
+		if err != nil {
+			panic(err)
+		}
+
+		serv , err := accept(listner)
+		if err != nil {
+			panic(err)
+		}
+
+		stat , err := serv.flood()
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(stat)
+	} else {
+		clint , err := connect(opts.client)
+		if err != nil {
+			panic(err)
+		}
+
+		lat , sped , err := clint.askflood()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("latency :" , lat , "speed :" , sped)
+	}
+}
+
+func main () {
+	Vperf()
 }
