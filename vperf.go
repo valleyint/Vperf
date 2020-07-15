@@ -261,6 +261,7 @@ func (c *client) askflood () (int , float64 , error) {
 		return 0 , 0 ,err
 	}
 	fmt.Println(stat)
+
 	return lat , speed , nil
 }
 
@@ -290,6 +291,7 @@ func Vperf () {
 		if err != nil {
 			panic(err)
 		}
+		defer serv.conn.Close()
 
 		stat , err := serv.flood()
 		if err != nil {
@@ -302,6 +304,7 @@ func Vperf () {
 		if err != nil {
 			panic(err)
 		}
+		defer clint.conn.Close()
 
 		_ , _ , err = clint.askflood()
 		if err != nil {
