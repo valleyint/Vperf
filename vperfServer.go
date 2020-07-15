@@ -62,7 +62,6 @@ func (s *server) flood () (string , error) {
 	if err != nil {
 		return "" , nil
 	}
-	fmt.Println("recived order")
 	err = doFlood(s.conn , frm)
 	if err != nil {
 		return "" , err
@@ -111,7 +110,6 @@ func doFlood(conn *net.TCPConn , frm *frame) error {
 	starTim := time.Now()
 	frm.setSize(maxBufferSize)
 	for {
-		fmt.Println("sentframe")
 		last := time.Now().Sub(starTim) >= 5 * time.Second
 		err := frm.send(conn, last)
 		if err != nil {
@@ -149,12 +147,10 @@ func handleFlood(conn *net.TCPConn , frm *frame) (int , float64 , error) {
 		}
 
 		if frm.getFinal() == true {
-			fmt.Println("Now received final", frm.getFinal())
 			break
 		}
 
 		bytesRead += frm.getSize()
-		fmt.Println("Now received total flood", bytesRead)
 	}
 	throughDur := time.Now().Sub(Start)
 	throughPut := float64(bytesRead) / throughDur.Seconds()
@@ -167,7 +163,6 @@ func (f *frame) send(conn *net.TCPConn, final bool) error {
 	amountWriten := 0
 	f.setFinal(final)
 	sz := f.getSize()
-	fmt.Println("Will send total of", sz, "bytes", "final", final)
 	for {
 		numWriten, err := conn.Write(f.data[amountWriten : sz])
 		if err != nil {
@@ -178,8 +173,6 @@ func (f *frame) send(conn *net.TCPConn, final bool) error {
 		if amountWriten == int(sz) {
 			return nil
 		}
-
-		fmt.Println("Now written total of", amountWriten)
 
 		if numWriten == 0 {
 			time.Sleep(1 * time.Millisecond)
@@ -202,7 +195,6 @@ func (f *frame) receive (conn *net.TCPConn) error {
 		}
 	}
 	f.firstArrival = time.Now()
-	fmt.Println("Got first byte")
 
 	for {
 		numRead, err := conn.Read(f.data[amountRead:9])
@@ -211,7 +203,6 @@ func (f *frame) receive (conn *net.TCPConn) error {
 		}
 
 		amountRead += uint64(numRead)
-		fmt.Println("Total read now is", amountRead)
 		if amountRead == 9 {
 			break
 		}
@@ -222,7 +213,6 @@ func (f *frame) receive (conn *net.TCPConn) error {
 	}
 
 	size := f.getSize()
-	fmt.Println("Now reading remaining", size)
 	for {
 		numRead, err := conn.Read(f.data[amountRead : size])
 		if err != nil {
@@ -230,9 +220,7 @@ func (f *frame) receive (conn *net.TCPConn) error {
 		}
 
 		amountRead += uint64(numRead)
-		fmt.Println("Now read total", amountRead)
 		if amountRead == size {
-			fmt.Println("Done reading", amountRead)
 			return nil
 		}
 
@@ -264,7 +252,7 @@ func (c *client) askflood () (int , float64 , error) {
 		return 0 , 0 , err
 	}
 
-	stat := fmt.Sprintf("Done askFlood latency was %v ms speed %v mbps\n", lat, speed)
+	stat := fmt.Sprintf("latency was %v ms speed %.1f mbps", lat, speed)
 	copy(frm.data[9 : ] , stat)
 	frm.setSize(uint64(len(stat)+9))
 
@@ -272,7 +260,7 @@ func (c *client) askflood () (int , float64 , error) {
 	if err != nil {
 		return 0 , 0 ,err
 	}
-	fmt.Println("latancy" , lat , "speed" , speed)
+	fmt.Println(stat)
 	return lat , speed , nil
 }
 
@@ -297,15 +285,12 @@ func Vperf () {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("listning")
 
 		serv , err := accept(listner)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("serving")
 
-		fmt.Println("floodstart")
 		stat , err := serv.flood()
 		if err != nil {
 			panic(err)
@@ -317,14 +302,11 @@ func Vperf () {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("connected")
 
-		fmt.Println("askedFlood")
-		lat , sped , err := clint.askflood()
+		_ , _ , err = clint.askflood()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(lat , sped)
 	}
 }
 
