@@ -287,18 +287,20 @@ func Vperf () {
 			panic(err)
 		}
 
-		serv , err := accept(listner)
-		if err != nil {
-			panic(err)
-		}
-		defer serv.conn.Close()
+		for {
+			serv, err := accept(listner)
+			if err != nil {
+				panic(err)
+			}
+			defer serv.conn.Close()
 
-		stat , err := serv.flood()
-		if err != nil {
-			panic(err)
-		}
+			stat, err := serv.flood()
+			if err != nil {
+				panic(err)
+			}
 
-		fmt.Println(stat)
+			fmt.Println(stat)
+		}
 	} else {
 		clint , err := connect(opts.client)
 		if err != nil {
