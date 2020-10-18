@@ -9,8 +9,12 @@ import (
 	"time"
 )
 
-const usualPort = "2222"
-const maxBufferSize = 100 * 1024 * 1024
+const (
+	usualPort = "2222"
+	maxBufferSize = 100 * 1024 * 1024
+	readBuffSize = 64000
+	writeBuffSize = 64000
+)
 
 type options struct {
 	server bool
@@ -48,6 +52,16 @@ func accept(listner *net.TCPListener) (*server, error) {
 	conn, err := listner.AcceptTCP()
 	if err != nil {
 		_ = listner.Close()
+		return nil, err
+	}
+
+	err = conn.SetReadBuffer(readBuffSize)
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.SetWriteBuffer(writeBuffSize)
+	if err != nil {
 		return nil, err
 	}
 
@@ -242,6 +256,17 @@ func connect (host string) (*client , error) {
 	}
 
 	clint := client{conn: conn}
+
+	err = conn.SetReadBuffer(readBuffSize)
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.SetWriteBuffer(writeBuffSize)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clint , nil
 }
 
@@ -267,7 +292,7 @@ func (c *client) askflood () (int , float64 , error) {
 
 func Vperf () {
 	var opts options
-	flag.BoolVar(&opts.server , "server" , false , "specify a mode -s (server) or -c (client)")
+	flag.BoolVar(&opts.server , "server"	 , false , "specify a mode -s (server) or -c (client)")
 	flag.StringVar(&opts.client , "client" , "" , "specify a mode -s (server) or -c (client)")
 	flag.Parse()
 
