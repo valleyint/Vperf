@@ -12,8 +12,8 @@ import (
 const (
 	usualPort = "2222"
 	maxBufferSize = 100 * 1024 * 1024
-	readBuffSize = 64000
-	writeBuffSize = 64000
+	readBuffSize = 64000000
+	writeBuffSize = 64000000
 )
 
 type options struct {
