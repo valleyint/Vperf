@@ -292,8 +292,8 @@ func (c *client) askflood () (int , float64 , error) {
 
 func Vperf () {
 	var opts options
-	flag.BoolVar(&opts.server , "server"	 , false , "specify a mode -s (server) or -c (client)")
-	flag.StringVar(&opts.client , "client" , "" , "specify a mode -s (server) or -c (client)")
+	flag.BoolVar(&opts.server , "s"	 , false , "specify a mode -s (server) or -c (client)")
+	flag.StringVar(&opts.client , "c" , "" , "specify a mode -s (server) or -c (client)")
 	flag.Parse()
 
 	if opts.server && len(opts.client) != 0 {
