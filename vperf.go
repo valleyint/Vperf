@@ -54,6 +54,7 @@ func accept(listner *net.TCPListener) (*server, error) {
 		_ = listner.Close()
 		return nil, err
 	}
+	fmt.Println("started checking")
 
 	err = conn.SetReadBuffer(readBuffSize)
 	if err != nil {
