@@ -35,7 +35,7 @@ type client struct {
 	conn *net.UDPConn
 }
 
-func listen() (*net.UDPAddr, error) {
+func listen() (*server, error) {
 	addr, err := net.ResolveUDPAddr("tcp", fmt.Sprintf(":%v", usualPort))
 	if err != nil {
 		return nil, err
@@ -46,11 +46,7 @@ func listen() (*net.UDPAddr, error) {
 	//	return nil, err
 	//}
 
-	return addr, nil
-}
-
-func accept(listner *net.UDPAddr) (*server, error) {
-	conn, err := net.ListenUDP(network , listner)
+	conn, err := net.ListenUDP(network , addr)
 	if err != nil {
 		_ = conn.Close()
 		return nil, err
@@ -312,17 +308,18 @@ func Vperf () {
 	}
 
 	if opts.server {
-		listner , err := listen()
+		serv , err := listen()
 		if err != nil {
 			panic(err)
 		}
+		defer serv.conn.Close()
 
 		for {
-			serv, err := accept(listner)
-			if err != nil {
-				panic(err)
-			}
-			defer serv.conn.Close()
+			//serv, err := accept(listner)
+			//if err != nil {
+			//	panic(err)
+			//}
+			//defer serv.conn.Close()
 
 			stat, err := serv.flood()
 			if err != nil {
