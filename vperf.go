@@ -10,11 +10,10 @@ import (
 )
 
 const (
-	usualPort		= "2222"
-	maxBufferSize	= 100 * 1024 * 1024
-	readBuffSize	= 64000
-	writeBuffSize 	= 64000
-	network			= "udp"
+	usualPort = "2222"
+	maxBufferSize = 100 * 1024 * 1024
+	readBuffSize = 64000
+	writeBuffSize = 64000
 )
 
 type options struct {
@@ -23,7 +22,7 @@ type options struct {
 }
 
 type server struct {
-	conn *net.UDPConn
+	conn *net.TCPConn
 }
 
 type frame struct {
@@ -32,23 +31,36 @@ type frame struct {
 }
 
 type client struct {
-	conn *net.UDPConn
+	conn *net.TCPConn
 }
 
+<<<<<<< HEAD
 func listen() (*server, error) {
 	addr, err := net.ResolveUDPAddr(network, fmt.Sprintf(":%v", usualPort))
+=======
+func listen() (*net.TCPListener, error) {
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", usualPort))
+>>>>>>> parent of 5bfd19b... moved from tcp to udp
 	if err != nil {
 		return nil, err
 	}
 
-	//listner, err := net.ListenTCP("tcp", addr)
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	conn, err := net.ListenUDP(network , addr)
+	listner, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		_ = conn.Close()
+		return nil, err
+	}
+
+<<<<<<< HEAD
+	conn, err := net.ListenUDP(network , addr)
+=======
+	return listner, nil
+}
+
+func accept(listner *net.TCPListener) (*server, error) {
+	conn, err := listner.AcceptTCP()
+>>>>>>> parent of 5bfd19b... moved from tcp to udp
+	if err != nil {
+		_ = listner.Close()
 		return nil, err
 	}
 	fmt.Println("connected")
@@ -118,7 +130,7 @@ func (f *frame) setSize(size uint64) {
 	binary.BigEndian.PutUint64(f.data[0:8], size)
 }
 
-func doFlood(conn *net.UDPConn , frm *frame) error {
+func doFlood(conn *net.TCPConn , frm *frame) error {
 	starTim := time.Now()
 	frm.setSize(maxBufferSize)
 	for {
@@ -135,7 +147,7 @@ func doFlood(conn *net.UDPConn , frm *frame) error {
 }
 
 //latency milliseconds, throughput Megabits/second , error
-func handleFlood(conn *net.UDPConn , frm *frame) (int , float64 , error) {
+func handleFlood(conn *net.TCPConn , frm *frame) (int , float64 , error) {
 	cmd := []byte("flood me")
 	copy(frm.data[9 : ] , cmd)
 	frm.setSize(uint64(len(cmd)+9))
@@ -171,7 +183,7 @@ func handleFlood(conn *net.UDPConn , frm *frame) (int , float64 , error) {
 	return lat , throughPut , nil
 }
 
-func (f *frame) send(conn *net.UDPConn, final bool) error {
+func (f *frame) send(conn *net.TCPConn, final bool) error {
 	amountWriten := 0
 	f.setFinal(final)
 	sz := f.getSize()
@@ -192,7 +204,7 @@ func (f *frame) send(conn *net.UDPConn, final bool) error {
 	}
 }
 
-func (f *frame) receive (conn *net.UDPConn) error {
+func (f *frame) receive (conn *net.TCPConn) error {
 	var amountRead uint64
 
 	for amountRead < 1 {
@@ -243,12 +255,12 @@ func (f *frame) receive (conn *net.UDPConn) error {
 }
 
 func connect (host string) (*client , error) {
-	raddr , err := net.ResolveUDPAddr(network , net.JoinHostPort(host , usualPort))
+	raddr , err := net.ResolveTCPAddr("tcp" , net.JoinHostPort(host , usualPort))
 	if err != nil {
 		return nil, err
 	}
 
-	conn , err := net.DialUDP(network , nil , raddr)
+	conn , err := net.DialTCP("tcp" , nil , raddr)
 	if err != nil {
 		return nil, err
 	}
@@ -297,8 +309,7 @@ func Vperf () {
 	flag.Parse()
 
 	if opts.server && len(opts.client) != 0 {
-		fmt.Printf("the program cannot be both a sever and client /n if you wish to loopback please use 2 " +
-			"windows for the function")
+		fmt.Printf("the program cannot be both a sever and client /n if you wish to loopback please use 2 windows for the function")
 		return
 	}
 
