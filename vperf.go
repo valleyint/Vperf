@@ -36,7 +36,7 @@ type client struct {
 }
 
 func listen() (*server, error) {
-	addr, err := net.ResolveUDPAddr("tcp", fmt.Sprintf(":%v", usualPort))
+	addr, err := net.ResolveUDPAddr(network, fmt.Sprintf(":%v", usualPort))
 	if err != nil {
 		return nil, err
 	}
