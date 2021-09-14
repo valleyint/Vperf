@@ -36,15 +36,11 @@ type client struct {
 
 <<<<<<< HEAD
 func listen() (*server, error) {
-<<<<<<< HEAD
 	addr, err := net.ResolveUDPAddr(network, fmt.Sprintf(":%v", usualPort))
 =======
 func listen() (*net.TCPListener, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", usualPort))
 >>>>>>> parent of 5bfd19b... moved from tcp to udp
-=======
-	addr, err := net.ResolveUDPAddr("tcp", fmt.Sprintf(":%v", usualPort))
->>>>>>> parent of eb30f75... minor change
 	if err != nil {
 		return nil, err
 	}
