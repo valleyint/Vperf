@@ -196,10 +196,13 @@ func (f *frame) receive (conn *net.UDPConn) error {
 	var amountRead uint64
 
 	for amountRead < 1 {
-		numRead, err := conn.Read(f.data[0:1])
+		//numRead, err := conn.Read(f.data[0:1])
+
+		numRead, _ , err := conn.ReadFrom(f.data)
 		if err != nil {
 			return err
 		}
+
 		amountRead += uint64(numRead)
 
 		if numRead == 0 {
@@ -209,7 +212,7 @@ func (f *frame) receive (conn *net.UDPConn) error {
 	f.firstArrival = time.Now()
 
 	for {
-		numRead, err := conn.Read(f.data[amountRead:9])
+		numRead, _ , err := conn.ReadFrom(f.data[amountRead:9])
 		if err != nil {
 			return err
 		}
@@ -226,7 +229,7 @@ func (f *frame) receive (conn *net.UDPConn) error {
 
 	size := f.getSize()
 	for {
-		numRead, err := conn.Read(f.data[amountRead : size])
+		numRead , _ , err := conn.ReadFrom(f.data[amountRead : size])
 		if err != nil {
 			return err
 		}
@@ -320,6 +323,8 @@ func Vperf () {
 			//	panic(err)
 			//}
 			//defer serv.conn.Close()
+
+			fmt.Println("started flood")
 
 			stat, err := serv.flood()
 			if err != nil {
